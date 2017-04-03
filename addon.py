@@ -78,29 +78,29 @@ def run():
 
     # Get params
     params = plugintools.get_params()
-    plugintools.log("arenavisionezy.run " + repr(params))
+    plugintools.log("arenavisionezy.run " + repr(params), xbmc.LOGDEBUG)
 
     if params.get("action") is None:
-        plugintools.log("arenavisionezy.run: No action selected")
+        plugintools.log("arenavisionezy.run: No action selected", xbmc.LOGDEBUG)
         category_list(params)
     else:
         action = params.get("action")
-        plugintools.log("arenavisionezy.run Action: " + action)
+        plugintools.log("arenavisionezy.run Action: " + action, xbmc.LOGDEBUG)
         exec action+"(params)"
     
     plugintools.close_item_list()
 
 # Main menu
 def category_list(params):
-  plugintools.log("arenavisionezy.category_list "+repr(params))
+  plugintools.log("arenavisionezy.category_list "+repr(params), xbmc.LOGDEBUG)
 
   # Set JSON URL
   jsonUrl = parserJsonUrl
-  plugintools.log("arenavisionezy.category_list Parsing: " + jsonUrl)
+  plugintools.log("arenavisionezy.category_list Parsing: " + jsonUrl, xbmc.LOGDEBUG)
   
   # JSON Request
   jsonSrc = makeRequest(jsonUrl)
-  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc)
+  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc, xbmc.LOGDEBUG)
 
   # Validate request format
   if(is_json(jsonSrc) == False):
@@ -144,7 +144,7 @@ def category_list(params):
       
       # Thumbnail
       category_thumb = set_thumbnail(category['categoria'])
-      plugintools.log("arenavisionezy.category_thumb "+category_thumb)
+      plugintools.log("arenavisionezy.category_thumb "+category_thumb, xbmc.LOGDEBUG)
       
       # Items
       plugintools.add_item(
@@ -159,11 +159,11 @@ def category_list(params):
 
 # Schedule list
 def show_schedule(params):
-  plugintools.log("arenavisionezy.show_schedule "+repr(params))
+  plugintools.log("arenavisionezy.show_schedule "+repr(params), xbmc.LOGDEBUG)
 
   # Parse JSON
   jsonUrl = parserJsonUrl + '?cat=all'
-  plugintools.log("arenavisionezy.show_schedule Parsing: " + jsonUrl)
+  plugintools.log("arenavisionezy.show_schedule Parsing: " + jsonUrl, xbmc.LOGDEBUG)
   jsonSrc     = urllib2.urlopen(jsonUrl)
   request     = json.load(jsonSrc)
   events      = request['eventos']
@@ -191,15 +191,15 @@ def show_schedule(params):
 
 # List all category events
 def events_list(params):
-  plugintools.log("Python Version: " + (sys.version))
-  plugintools.log("arenavisionezy.events_list "+repr(params))
+  plugintools.log("Python Version: " + (sys.version), xbmc.LOGDEBUG)
+  plugintools.log("arenavisionezy.events_list "+repr(params), xbmc.LOGDEBUG)
   category = params['cat']
   
   # Parse json
   jsonUrl = parserJsonUrl + '?cat='+urllib.quote(category)
-  plugintools.log("arenavisionezy.events_list Parsing: " + jsonUrl)
+  plugintools.log("arenavisionezy.events_list Parsing: " + jsonUrl, xbmc.LOGDEBUG)
   jsonSrc = makeRequest(jsonUrl)
-  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc)
+  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc, xbmc.LOGDEBUG)
 
   # Load JSON request
   request = json.loads(jsonSrc)
@@ -221,14 +221,14 @@ def events_list(params):
   # For each event...
   for event in events:
     # ToDo: Past events
-    #plugintools.log("ENd: " + ending_time)
+    #plugintools.log("Endtime: " + ending_time)
     #showDate = datetime.strptime(ending_time, "%d/%m/%y %H:%M:%S").date()
     #todayDate = datetime.today().date()
     #if(showDate < todayDate):
     #  color = 'grey'
     #else:
     #  color = 'skyblue'
-    color = 'skyblue'
+    color     = 'skyblue'
     title     = "[COLOR "+color+"]" + event['fecha'] + " " + event['hora'] + "[/COLOR] " + event['titulo']
     plot      = ""
     thumbnail = set_thumbnail(category)
@@ -245,14 +245,14 @@ def events_list(params):
 
 # List event channels
 def channels_list(params):
-  plugintools.log("arenavisionezy.channels_list "+repr(params))
+  plugintools.log("arenavisionezy.channels_list "+repr(params), xbmc.LOGDEBUG)
   event = params['event']
   
   # Parse json
-  jsonUrl = parserJsonUrl + '?event='+event
-  plugintools.log("arenavisionezy.channels_list Parsing: " + jsonUrl)
+  jsonUrl = parserJsonUrl + '?evento='+event
+  plugintools.log("arenavisionezy.channels_list Parsing: " + jsonUrl, xbmc.LOGDEBUG)
   jsonSrc = makeRequest(jsonUrl)
-  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc)
+  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc, xbmc.LOGDEBUG)
 
   # Load JSON request
   event = json.loads(jsonSrc)
@@ -270,7 +270,7 @@ def channels_list(params):
   endtime  = event['fecha']
   channels = event['canales']
 
-  # Informacion del event
+  # Event information
   title01 = "[COLOR skyblue] " + category + " - " + endtime + "[/COLOR]"
   plugintools.add_item( title = title01 , thumbnail = set_thumbnail('default'), isPlayable = True, folder = True )
   title01 = "[COLOR skyblue] " + title + "[/COLOR]"
@@ -278,10 +278,10 @@ def channels_list(params):
 
   # Event channels
   for channel in channels:
-    channel_nombre = channel['canal']
-    channel_url    = channel['enlace']
-    channel_lang   = channel['idioma']
-    channel_mode   = channel['mode']
+    channel_name = channel['canal']
+    channel_url  = channel['enlace']
+    channel_lang = channel['idioma']
+    channel_mode = channel['mode']
 	
     label = "["+channel_lang+"] [COLOR red]" + channel_name + "[/COLOR]" + " "
 
@@ -301,15 +301,15 @@ def set_thumbnail(category):
   thumb_path = os.path.dirname(__file__) + "/resources/media/" + thumb + ".png"
   if(os.path.isfile(thumb_path)):
     # Category thumbnail
-    category_thumb = "special://home/addons/" + addon_id + "/resources/media/" + thumb + ".png"
+    category_thumb = "special://home/addons/" + plugintools.ADDONID + "/resources/media/" + thumb + ".png"
   else:
     # Default thumbnail
-    category_thumb = "special://home/addons/" + addon_id + "/resources/media/default.png"
+    category_thumb = "special://home/addons/" + plugintools.ADDONID + "/resources/media/default.png"
   return category_thumb
 
 # Display errors as Notification
 def display_error(title, message, debug=""):
-    plugintools.log("ERROR: " + title)
+    plugintools.log("ERROR: " + title, xbmc.LOGERROR)
 
     errTitle = "[COLOR red][UPPERCASE]ERROR: " + title + "[/UPPERCASE][/COLOR]"
     errMsg   = message + "[CR]For more information, please check your logs."
@@ -320,7 +320,7 @@ def display_error(title, message, debug=""):
 
 # Make HTTP request
 def makeRequest(url):
-  plugintools.log("makeRequest: " + url)
+  plugintools.log("makeRequest: " + url, xbmc.LOGDEBUG)
 
   try:
     req      = urllib2.Request(url)
@@ -330,7 +330,7 @@ def makeRequest(url):
     return data
   except urllib2.URLError, e:
     errorMsg = str(e)
-    plugintools.log(errorMsg);
+    plugintools.log(errorMsg, xbmc.LOGERROR);
     xbmc.executebuiltin("Notification(ArenavisionEzy,"+errorMsg+")")
     data_err = []
     data_err.append(['error', True])

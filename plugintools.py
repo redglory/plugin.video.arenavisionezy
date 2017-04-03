@@ -380,7 +380,7 @@ def add_item( action="" , title="" , plot="" , url="" , thumbnail="" , fanart=""
 
     listitem = xbmcgui.ListItem( title, iconImage="DefaultVideo.png", thumbnailImage=thumbnail )
     if info_labels is None:
-        info_labels = { "Title" : title, "FileName" : title, "Plot" : plot }
+        info_labels = { "Title" : title, "Plot" : plot }
     listitem.setInfo( "video", info_labels )
 
     if fanart!="":
