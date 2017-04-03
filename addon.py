@@ -7,6 +7,11 @@
 # Based on code from youtube addon
 #------------------------------------------------------------
 # Changelog:
+# 1.3.0
+# - code refactor
+# - converted text to english for better understanding
+# - fixed log errors
+# - bumped version to 1.3.0
 # 1.2.1
 # - Eliminar sopcast
 # - Eliminar diferencia ace/sop
@@ -51,140 +56,131 @@ from datetime import date
 from datetime import time
 from datetime import datetime
 import plugintools
-import tools
 import xbmcgui
 import xbmcaddon
 import xbmcplugin
 
-addon         = xbmcaddon.Addon('plugin.video.arenavisionezy')
-addon_id      = addon.getAddonInfo('id')
-addon_name    = addon.getAddonInfo('name')
-addon_version = addon.getAddonInfo('version')
-
-# Servidor origen
-if addon.getSetting('av_source_server') == "0":
+# Source Server
+if plugintools.ADDON.getSetting('av_source_server') == "0":
   parserJsonUrl = "https://avezy.tk/json.php"
-elif addon.getSetting('av_source_server') == "1":
+elif plugintools.ADDON.getSetting('av_source_server') == "1":
   parserJsonUrl = "http://arenavision.esy.es/json.php"
 else:
   parserJsonUrl = "https://avezy.tk/json.php"
 
-# Devel
-#parserJsonUrl = "http://localhost/arena/json.php"
-
-# Debug servidor seleccionado
-tools.debug("arenavisionezy Servidor: " + addon.getSetting('av_source_server'))
-tools.debug("arenavisionezy Json: " + parserJsonUrl)
+# Debug Selected Server
+if plugintools.ADDON.getSetting('debug_enabled') == 'true':
+  plugintools.log("arenavisionezy Servidor: " + plugintools.ADDON.getSetting('av_source_server'), xbmc.LOGDEBUG)
+  plugintools.log("arenavisionezy Json: " + parserJsonUrl, xbmc.LOGDEBUG)
 
 # Entry point
 def run():
-    #plugintools.log("arenavisionezy.run")
 
     # Get params
     params = plugintools.get_params()
     plugintools.log("arenavisionezy.run " + repr(params))
 
     if params.get("action") is None:
-        plugintools.log("arenavisionezy.run No hay accion")
-        listado_categorias(params)
+        plugintools.log("arenavisionezy.run: No action selected")
+        category_list(params)
     else:
         action = params.get("action")
-        plugintools.log("arenavisionezy.run Accion: " + action)
+        plugintools.log("arenavisionezy.run Action: " + action)
         exec action+"(params)"
     
     plugintools.close_item_list()
 
 # Main menu
-def listado_categorias(params):
-  plugintools.log("arenavisionezy.listado_categorias "+repr(params))
+def category_list(params):
+  plugintools.log("arenavisionezy.category_list "+repr(params))
 
-  # Definir URL del JSON
+  # Set JSON URL
   jsonUrl = parserJsonUrl
-  plugintools.log("arenavisionezy.listado_categorias Parsing: " + jsonUrl)
+  plugintools.log("arenavisionezy.category_list Parsing: " + jsonUrl)
   
-  # Peticion del JSON
+  # JSON Request
   jsonSrc = makeRequest(jsonUrl)
-  plugintools.log("arenavisionezy.listado_eventos Recibido jsonSrc: " + jsonSrc)
+  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc)
 
-  # Comprobar formato respuesta
+  # Validate request format
   if(is_json(jsonSrc) == False):
-    errorTitle = 'Respuesta no JSON'
-    errorMsg   = "La respuesta recibida no tiene formato JSON"
-    mostrar_errores(errorTitle, errorMsg, jsonSrc)
+    errorTitle = 'No JSON output'
+    errorMsg   = "Retrieved output is not JSON"
+    display_error(errorTitle, errorMsg, jsonSrc)
     return
 
-  # Cargar respuesta en json
-  datos = json.loads(jsonSrc)
+  # Load JSON request
+  request = json.loads(jsonSrc)
 
-  # Comprobar error en la respuesta
-  if('error' in datos):
-    errorTitle = 'Error procesando categorias'
-    errorMsg   = datos['msg']
-    mostrar_errores(errorTitle, errorMsg)
+  # Check if request retrieved an error
+  if('error' in request):
+    errorTitle = 'Error processing categories'
+    errorMsg   = request['msg']
+    display_error(errorTitle, errorMsg)
     return
   
-  categorias  = datos['categories']
-  last_update = datos['last_update']
+  categories  = request['categories']
+  last_update = request['last_update']
   
-  # Informacion del evento
-  titulo01 = "                    [COLOR skyblue]ArenaVision EZY[/COLOR] Version "+addon_version+" (Wazzu)"
-  titulo02 = "                    [COLOR deepskyblue]Ultima actualizacion: "+last_update+"[/COLOR]"
-  plugintools.add_item( title = titulo01 , thumbnail = generar_miniatura('default'), folder = False )
-  plugintools.add_item( title = titulo02 , thumbnail = generar_miniatura('default'), folder = False )
+  # Event information
+  title01 = "                    [COLOR skyblue]ArenaVision EZY[/COLOR] Version "+plugintools.ADDONVERSION+" (Wazzu)"
+  title02 = "                    [COLOR deepskyblue]Ultima actualizacion: "+last_update+"[/COLOR]"
+  plugintools.add_item( title = title01 , thumbnail = set_thumbnail('default'), folder = False )
+  plugintools.add_item( title = title02 , thumbnail = set_thumbnail('default'), folder = False )
 
-  # Todos los eventos
+  # Show all events
   plugintools.add_item(
-    action     = "mostrar_agenda" ,
+    action     = "show_schedule" ,
     title      = "[COLOR deepskyblue][VER AGENDA COMPLETA][/COLOR]",
     plot       = '' ,
-    url        = "plugin://plugin.video.arenavisionezy/?action=mostrar_agenda",
-    thumbnail  = generar_miniatura('default'),
+    url        = "plugin://plugin.video.arenavisionezy/?action=show_schedule",
+    thumbnail  = set_thumbnail('default'),
     isPlayable = True,
     folder     = True
   )
 
-  # Listado de categorias
-  for categoria in categorias:
+  # Categories list
+  for category in categories:
       
-      # Miniatura
-      category_thumb = generar_miniatura(categoria['categoria'])
+      # Thumbnail
+      category_thumb = set_thumbnail(category['categoria'])
       plugintools.log("arenavisionezy.category_thumb "+category_thumb)
       
       # Items
       plugintools.add_item(
-        action     = "listado_eventos" , 
-        title      = "[UPPERCASE]" + categoria['categoria'] + "[/UPPERCASE]" + " (" +  categoria['items'] + " eventos)", 
+        action     = "events_list" , 
+        title      = "[UPPERCASE]" + category['categoria'] + "[/UPPERCASE]" + " (" +  category['items'] + " events)", 
         plot       = '' , 
-        url        = "plugin://plugin.video.arenavisionezy/?action=listado_eventos&cat="+urllib.quote(categoria['categoria']),
+        url        = "plugin://plugin.video.arenavisionezy/?action=events_list&cat="+urllib.quote(category['categoria']),
         thumbnail  = category_thumb,
         isPlayable = True, 
         folder     = True
       )
 
-# Listado de toda la agenda
-def mostrar_agenda(params):
-  plugintools.log("arenavisionezy.mostrar_agenda "+repr(params))
+# Schedule list
+def show_schedule(params):
+  plugintools.log("arenavisionezy.show_schedule "+repr(params))
 
-  # Parse json
+  # Parse JSON
   jsonUrl = parserJsonUrl + '?cat=all'
-  plugintools.log("arenavisionezy.mostrar_agenda Parsing: " + jsonUrl)
+  plugintools.log("arenavisionezy.show_schedule Parsing: " + jsonUrl)
   jsonSrc     = urllib2.urlopen(jsonUrl)
-  datos       = json.load(jsonSrc)
-  eventos     = datos['eventos']
-  last_update = datos['last_update']
+  request     = json.load(jsonSrc)
+  events      = request['eventos']
+  last_update = request['last_update']
 
-  # Titulo de la categoria
-  titulo01 = "                [COLOR skyblue]Agenda completa[/COLOR] (actualizado: "+last_update+")"
-  plugintools.add_item( title = titulo01 , thumbnail = generar_miniatura('default'), action='', url='', isPlayable = False, folder = False )
+  # Category title
+  title01 = "                [COLOR skyblue]Complete schedule[/COLOR] (last updated: "+last_update+")"
+  plugintools.add_item( title = title01 , thumbnail = set_thumbnail('default'), action='', url='', isPlayable = False, folder = False )
 
-  # Para cada evento
-  for evento in eventos:
-    title     = "[COLOR skyblue]" + evento['fecha'] + " " + evento['hora'] + "[/COLOR] " + evento['titulo']
+  # For each event...
+  for event in events:
+    title     = "[COLOR skyblue]" + event['fecha'] + " " + event['hora'] + "[/COLOR] " + event['titulo']
     plot      = ""
-    thumbnail = generar_miniatura(evento['categoria'])
-    url       = "plugin://plugin.video.arenavisionezy/?action=listado_canales&evento="+evento['id']
+    thumbnail = set_thumbnail(event['categoria'])
+    url       = "plugin://plugin.video.arenavisionezy/?action=channels_list&event="+event['id']
     plugintools.add_item(
-      action="listado_canales" ,
+      action="channels_list" ,
       title=title ,
       plot=plot ,
       url=url ,
@@ -193,52 +189,52 @@ def mostrar_agenda(params):
       folder=True
     )
 
-# Listado de eventos de una categoria
-def listado_eventos(params):
+# List all category events
+def events_list(params):
   plugintools.log("Python Version: " + (sys.version))
-  plugintools.log("arenavisionezy.listado_eventos "+repr(params))
-  categoria = params['cat']
+  plugintools.log("arenavisionezy.events_list "+repr(params))
+  category = params['cat']
   
   # Parse json
-  jsonUrl = parserJsonUrl + '?cat='+urllib.quote(categoria)
-  plugintools.log("arenavisionezy.listado_eventos Parsing: " + jsonUrl)
+  jsonUrl = parserJsonUrl + '?cat='+urllib.quote(category)
+  plugintools.log("arenavisionezy.events_list Parsing: " + jsonUrl)
   jsonSrc = makeRequest(jsonUrl)
-  plugintools.log("arenavisionezy.listado_eventos Recibido jsonSrc: " + jsonSrc)
+  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc)
 
-  # Cargar respuesta en json
-  datos = json.loads(jsonSrc)
+  # Load JSON request
+  request = json.loads(jsonSrc)
 
-  # Comprobar error en la respuesta
-  if('error' in datos):
-    errorTitle = 'Error procesando eventos'
-    errorMsg   = datos['msg']
-    mostrar_errores(errorTitle, errorMsg)
+  # Check if request retrieved any error
+  if('error' in request):
+    errorTitle = 'Error processing events'
+    errorMsg   = request['msg']
+    display_error(errorTitle, errorMsg)
     return
 
-  eventos     = datos['eventos']
-  last_update = datos['last_update']
+  events     = request['eventos']
+  last_update = request['last_update']
 
-  # Titulo de la categoria
-  titulo01 = "                [COLOR skyblue][UPPERCASE]"+categoria+"[/UPPERCASE][/COLOR] (actualizado: "+last_update+")"
-  plugintools.add_item( title = titulo01 , thumbnail = generar_miniatura('default'), action='', url='', isPlayable = False, folder = False )
+  # Category title
+  title01 = "                [COLOR skyblue][UPPERCASE]"+category+"[/UPPERCASE][/COLOR] (last updated: "+last_update+")"
+  plugintools.add_item( title = title01 , thumbnail = set_thumbnail('default'), action='', url='', isPlayable = False, folder = False )
   
-  # Para cada evento
-  for evento in eventos:
-    # ToDo eventos del pasado
-    #plugintools.log("Fecha: " + fecha_hora)
-    #showDate = datetime.strptime(fecha_hora, "%d/%m/%y %H:%M:%S").date()
+  # For each event...
+  for event in events:
+    # ToDo: Past events
+    #plugintools.log("ENd: " + ending_time)
+    #showDate = datetime.strptime(ending_time, "%d/%m/%y %H:%M:%S").date()
     #todayDate = datetime.today().date()
     #if(showDate < todayDate):
     #  color = 'grey'
     #else:
     #  color = 'skyblue'
     color = 'skyblue'
-    title     = "[COLOR "+color+"]" + evento['fecha'] + " " + evento['hora'] + "[/COLOR] " + evento['titulo']
+    title     = "[COLOR "+color+"]" + event['fecha'] + " " + event['hora'] + "[/COLOR] " + event['titulo']
     plot      = ""
-    thumbnail = generar_miniatura(categoria)
-    url       = "plugin://plugin.video.arenavisionezy/?action=listado_canales&evento="+evento['id']
+    thumbnail = set_thumbnail(category)
+    url       = "plugin://plugin.video.arenavisionezy/?action=channels_list&event="+event['id']
     plugintools.add_item(
-      action="listado_canales" , 
+      action="channels_list" , 
       title=title , 
       plot=plot , 
       url=url ,
@@ -247,83 +243,82 @@ def listado_eventos(params):
       folder=True
     )
 
-# Listado de canales de un evento
-def listado_canales(params):
-  plugintools.log("arenavisionezy.listado_canales "+repr(params))
-  evento = params['evento']
+# List event channels
+def channels_list(params):
+  plugintools.log("arenavisionezy.channels_list "+repr(params))
+  event = params['event']
   
   # Parse json
-  jsonUrl = parserJsonUrl + '?evento='+evento
-  plugintools.log("arenavisionezy.listado_canales Parsing: " + jsonUrl)
+  jsonUrl = parserJsonUrl + '?event='+event
+  plugintools.log("arenavisionezy.channels_list Parsing: " + jsonUrl)
   jsonSrc = makeRequest(jsonUrl)
-  plugintools.log("arenavisionezy.listado_eventos Recibido jsonSrc: " + jsonSrc)
+  plugintools.log("arenavisionezy.events_list jsonSrc output: " + jsonSrc)
 
-  # Cargar respuesta en json
-  evento = json.loads(jsonSrc)
+  # Load JSON request
+  event = json.loads(jsonSrc)
 
-  # Comprobar error en la respuesta
-  if('error' in evento):
-    errorTitle = 'Error procesando canales'
-    errorMsg   = evento['msg']
-    mostrar_errores(errorTitle, errorMsg)
-    return
+  # Check if response retrieved any error
+  if('error' in event):
+    errorTitle = 'Error processing channels'
+    errorMsg   = event['msg']
+    display_error(errorTitle, errorMsg)
     return
   
-  # Datos del evento
-  categoria = evento['categoria']
-  titulo    = evento['titulo']
-  fecha     = evento['fecha']
-  canales   = evento['canales']
+  # Event info
+  category = event['categoria']
+  title    = event['titulo']
+  endtime  = event['fecha']
+  channels = event['canales']
 
-  # Informacion del evento
-  titulo01 = "[COLOR skyblue] " + categoria + " - " + fecha + "[/COLOR]"
-  plugintools.add_item( title = titulo01 , thumbnail = generar_miniatura('default'), isPlayable = True, folder = True )
-  titulo01 = "[COLOR skyblue] " + titulo + "[/COLOR]"
-  plugintools.add_item( title = titulo01 , thumbnail = generar_miniatura('default'), isPlayable = True, folder = True )
+  # Informacion del event
+  title01 = "[COLOR skyblue] " + category + " - " + endtime + "[/COLOR]"
+  plugintools.add_item( title = title01 , thumbnail = set_thumbnail('default'), isPlayable = True, folder = True )
+  title01 = "[COLOR skyblue] " + title + "[/COLOR]"
+  plugintools.add_item( title = title01 , thumbnail = set_thumbnail('default'), isPlayable = True, folder = True )
 
-  # Canales del evento
-  for canal in canales:
-    canal_nombre = canal['canal']
-    canal_enlace = canal['enlace']
-    canal_idioma = canal['idioma']
-    canal_mode   = canal['mode']
+  # Event channels
+  for channel in channels:
+    channel_nombre = channel['canal']
+    channel_url    = channel['enlace']
+    channel_lang   = channel['idioma']
+    channel_mode   = channel['mode']
 	
-    etiqueta = "["+canal_idioma+"] [COLOR red]" + canal_nombre + "[/COLOR]" + " "
+    label = "["+channel_lang+"] [COLOR red]" + channel_name + "[/COLOR]" + " "
 
-    etiqueta = etiqueta + "  " + titulo
-    enlace   = "plugin://program.plexus/?url=" + canal_enlace + "&mode="+canal_mode+"&name=" + titulo
+    label = label + "  " + title
+    url   = "plugin://program.plexus/?url=" + channel_url + "&mode="+channel_mode+"&name=" + title
     plugintools.add_item( 
-      title      = etiqueta , 
-      url        = enlace , 
-      thumbnail  = generar_miniatura(categoria) ,
+      title      = label , 
+      url        = url , 
+      thumbnail  = set_thumbnail(category) ,
       isPlayable = True, 
       folder     = False 
     )
 
-# Ruta de la miniatura
-def generar_miniatura(categoria):
-  thumb = categoria.lower().replace(" ", "_")
+# Thumbnail source
+def set_thumbnail(category):
+  thumb = category.lower().replace(" ", "_")
   thumb_path = os.path.dirname(__file__) + "/resources/media/" + thumb + ".png"
   if(os.path.isfile(thumb_path)):
-    # Miniatura especifica
+    # Category thumbnail
     category_thumb = "special://home/addons/" + addon_id + "/resources/media/" + thumb + ".png"
   else:
-    # Miniatura generica
+    # Default thumbnail
     category_thumb = "special://home/addons/" + addon_id + "/resources/media/default.png"
   return category_thumb
 
-# Mostrar errores
-def mostrar_errores(titulo, mensaje, debug=""):
-    plugintools.log("ERROR: " + titulo)
+# Display errors as Notification
+def display_error(title, message, debug=""):
+    plugintools.log("ERROR: " + title)
 
-    errTitle = "[COLOR red][UPPERCASE]ERROR: " + titulo + "[/UPPERCASE][/COLOR]"
-    errMsg   = mensaje + "[CR]Para mas informacion, por favor, consulta el registro."
+    errTitle = "[COLOR red][UPPERCASE]ERROR: " + title + "[/UPPERCASE][/COLOR]"
+    errMsg   = message + "[CR]For more information, please check your logs."
     
-    plugintools.add_item( title = errTitle, thumbnail = generar_miniatura('default'), action='', url='', isPlayable = False, folder = False )
-    plugintools.add_item( title = errMsg, thumbnail = generar_miniatura('default'), action='', url='', isPlayable = False, folder = False )
+    plugintools.add_item( title = errTitle, thumbnail = set_thumbnail('default'), action='', url='', isPlayable = False, folder = False )
+    plugintools.add_item( title = errMsg, thumbnail = set_thumbnail('default'), action='', url='', isPlayable = False, folder = False )
     return
 
-# Realizar peticion HTTP
+# Make HTTP request
 def makeRequest(url):
   plugintools.log("makeRequest: " + url)
 
@@ -344,7 +339,7 @@ def makeRequest(url):
     data_err = "{\"error\":\"true\", \"msg\":\""+errorMsg+"\"}"
     return data_err
 
-# Comprobar si la cadena es json
+# Check if output is in JSON format
 def is_json(myjson):
     try:
         json_object = json.loads(myjson)

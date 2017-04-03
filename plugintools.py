@@ -35,6 +35,10 @@
 # - Added set_view function
 # 1.0.8
 # - Added selector
+# 1.0.9
+# - fix log errors
+# - refactor some code
+# - added getSetting(settingName)
 #---------------------------------------------------------------------------
 
 import xbmc
@@ -51,6 +55,13 @@ import time
 import socket
 from StringIO import StringIO
 import gzip
+
+# Set Add-On generic info
+ADDON = xbmcaddon.Addon()
+ADDONID = ADDON.getAddonInfo('id')
+ADDONNAME = ADDON.getAddonInfo('name')
+ADDONVERSION = ADDON.getAddonInfo('version')
+LANGUAGE = ADDON.getLocalizedString
 
 module_log_enabled = True
 http_debug_log_enabled = False
@@ -110,13 +121,16 @@ ALL_VIEW_CODES = {
 }
 
 # Write something on XBMC log
-def log(message):
-    xbmc.log(message)
+def log(txt, level=xbmc.LOGINFO):
+    if isinstance (txt,str):
+        txt = txt.decode("utf-8")
+    message = u'%s: %s' % (ADDONID, txt)
+    xbmc.log(msg=message.encode("utf-8"), level=level)
 
 # Write this module messages on XBMC log
 def _log(message):
     if module_log_enabled:
-        xbmc.log("plugintools."+message)
+        log("plugintools."+message, xbmc.LOGDEBUG)
 
 # Parse XBMC params - based on script.module.parsedom addon    
 def get_params():
@@ -144,6 +158,10 @@ def get_params():
     
     _log("get_params "+repr(commands))
     return commands
+
+def getSetting(settingName):
+    settingValue = ADDON.getSetting(settingName)
+    return settingValue
 
 # Fetch text content from an URL
 def read(url):
@@ -573,10 +591,3 @@ def set_view(view_mode, view_code=0):
 f = open( os.path.join( os.path.dirname(__file__) , "addon.xml") )
 data = f.read()
 f.close()
-
-addon_id = find_single_match(data,'id="([^"]+)"')
-if addon_id=="":
-    addon_id = find_single_match(data,"id='([^']+)'")
-
-__settings__ = xbmcaddon.Addon(id=addon_id)
-__language__ = __settings__.getLocalizedString
