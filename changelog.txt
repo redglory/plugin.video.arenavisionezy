@@ -1,9 +1,16 @@
 ===== Stable versions =======
+[B]v1.3.0 (03/04/2017)[/B]
+- code refactor
+- converted text to english for better understanding
+- fixed log errors
+- removed tools.py dependancy (moved methods to plugintools.py)
+- updated all addon.py references to plugintools
+
 [B]v1.2.1 (09/12/2016)[/B]
  - Eliminar sopcast
  - Eliminar diferencia ace/sop
 
- [B]v1.2.0 (27/09/2016)[/B]
+[B]v1.2.0 (27/09/2016)[/B]
 - Nueva version plugintools 1.0.8
 - Muestra el idioma en el listado de canales
 
